@@ -15,21 +15,25 @@ export default function RSC({
   const [error, setError] = React.useState<Error | null>(null);
 
   const setComponent = React.useCallback(async () => {
+    console.debug('[RemoteComponent] Attempting to load component');
     try {
       if (typeof openRemoteComponent === 'function') {
         const rsc = await openRemoteComponent(source);
+        console.debug('[RemoteComponent] Successfully loaded component');
         return setRemoteComponent(() => rsc);
       }
       throw new Error(
         `[RemoteComponent]: typeof openRemoteComponent should be function`
       );
     } catch (e) {
+      console.debug('[RemoteComponent] Error loading component:', e);
       setRemoteComponent(() => null);
       setError(e as Error);
     }
   }, [source, openRemoteComponent]);
 
   React.useEffect(() => {
+    console.debug('[RemoteComponent] Component mount effect triggered');
     setComponent();
   }, [setComponent]);
 
@@ -55,6 +59,7 @@ export default function RSC({
   }, [loadingComponent]);
 
   if (typeof RemoteComponent === 'function') {
+    console.debug('[RemoteComponent] Rendering remote component');
     return (
       <React.Fragment>
         <React.Suspense fallback={<FallbackComponent />} />
@@ -63,7 +68,9 @@ export default function RSC({
       </React.Fragment>
     );
   } else if (error) {
+    console.debug('[RemoteComponent] Rendering error component');
     return <ErrorComponent />;
   }
+  console.debug('[RemoteComponent] Rendering loading component');
   return <LoadingComponent />;
 }

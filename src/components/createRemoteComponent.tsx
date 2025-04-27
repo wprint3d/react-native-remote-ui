@@ -56,6 +56,7 @@ const buildComponent =
     ) => void;
   }) =>
   async (source: RemoteComponentSource): Promise<React.Component> => {
+    console.debug('[RemoteComponent] Building component from source:', source);
     if (source && typeof source === 'object') {
       if ('code' in source) {
         // Handle directly provided transpiled JSX source
@@ -79,6 +80,7 @@ const buildRequest =
     readonly component: (src: string) => Promise<React.Component>;
   }) =>
   async (uri: string, callback: RemoteComponentPromise<React.Component>) => {
+    console.debug('[RemoteComponent] Building request for URI:', uri);
     try {
       const result = await axiosRequest({ url: uri, method: 'get' });
       const { data, headers } = result;
@@ -95,7 +97,9 @@ const buildRequest =
           `[RemoteComponent]: Expected string data, encountered ${typeof data}`
         );
       }
+      console.debug('[RemoteComponent] Component data received, creating component');
       const Component = await component(data);
+      console.debug('[RemoteComponent] Component created successfully');
       cache.set(uri, {
         value: Component,
         ttl: ttl,
@@ -103,6 +107,7 @@ const buildRequest =
       });
       return callback.resolve(Component);
     } catch (e) {
+      console.debug('[RemoteComponent] Error building request:', e);
       cache.set(uri, null);
       console.log(`[RemoteComponent]: Build Request caught error ${e}`);
       return callback.reject(new Error(`${(e as Error).message}`));
@@ -119,12 +124,14 @@ const buildURIForRemoteComponent =
     ) => void;
   }) =>
   (uri: string, callback: RemoteComponentPromise<React.Component>): void => {
+    console.debug('[RemoteComponent] Building URI component:', uri);
     const cachedTimeStamp: number = cache.getTimeStamp(uri);
     const ttl: number = cache.getTTL(uri);
     const { resolve, reject } = callback;
 
     // No value found for ttl, serve component from cache if exists
     if (ttl === -1) {
+      console.debug('[RemoteComponent] Checking cache for component');
       const Component = cache.get(uri);
       if (Component === null) {
         return uriRequest(uri, callback);
@@ -136,6 +143,7 @@ const buildURIForRemoteComponent =
     // ignore cache in case of ttl is 0
     // for any other value, check if cache needs to burst
     if (ttl === 0 || Date.now() - cachedTimeStamp > ttl) {
+      console.debug('[RemoteComponent] Cache expired or TTL is 0, refreshing component');
       cache.delete(uri);
       return uriRequest(uri, callback);
     }
